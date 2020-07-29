@@ -33,7 +33,9 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:us-east-1:*:*"
+        - ses:*
+      Resource: '*'
+#"arn:aws:dynamodb:us-east-1:*:*"
 
 functions:
   # Defines an HTTP API endpoint that calls the main function in create.js
@@ -105,6 +107,13 @@ functions:
           method: post
           cors: true
           authorizer: aws_iam
+  sendMail:
+    handler: sendMail.main
+    events:
+      - http:
+          path: send-email
+          method: post
+          cors: true
 # Create our resources with separate CloudFormation templates
 resources:
   # API Gateway Errors

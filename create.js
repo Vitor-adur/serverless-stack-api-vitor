@@ -1,9 +1,13 @@
 import * as uuid from "uuid";
 import handler from "./libs/handler-lib";
 import dynamoDb from "./libs/dynamodb-lib";
+import AWS from "aws-sdk";
+
+const ses = new AWS.SES();
 
 export const main = handler(async (event, context) => {
-  const data = JSON.parse(event.body);
+  const { toCc, to, from, subject, content } = JSON.parse(event.body);
+  console.log('LOG_AQUI', event);
   const params = {
     TableName: process.env.tableName,
     // 'Item' contains the attributes of the item to be created
@@ -17,13 +21,29 @@ export const main = handler(async (event, context) => {
     Item: {
       userId: event.requestContext.identity.cognitoIdentityId,
       noteId: uuid.v1(),
-      content: data.content,
-      attachment: data.attachment,
+      content: content,
       createdAt: Date.now()
     }
   };
 
   await dynamoDb.put(params);
 
-  return params.Item;
+  const mailParams = {
+    Destination: {
+      CcAddresses: [ toCc ],
+      ToAddresses: [ to ]
+    },
+    Message: {
+        Body: {
+          Text: { Data: content }
+        },
+        Subject: { Data: subject }
+    },
+    Source: from
+  };
+
+    await ses.sendEmail(mailParams).promise();
+
+    return params.Item;
+
 });
